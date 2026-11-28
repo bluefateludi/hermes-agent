@@ -711,8 +711,10 @@ def render_batch(batch_id, frame_start, frame_end, features, seg_path):
         pipe.stdin.write(canvas.tobytes())
 
     pipe.stdin.close()
-    pipe.wait()
+    returncode = pipe.wait()
     stderr_fh.close()
+    if returncode:
+        raise subprocess.CalledProcessError(returncode, cmd)
 ```
 
 Concatenate segments + mux audio:

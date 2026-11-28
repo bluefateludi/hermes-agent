@@ -476,7 +476,7 @@ def render_clip(seg, features, clip_path):
     r = Renderer()
     r.set_grid(seg["grid"])
     S = r.S
-    random.seed(hash(seg["id"]) + 42)  # deterministic per scene
+    random.seed(seg["id"])  # string seeds are stable across worker processes
 
     # Build shader chain from config
     chain = ShaderChain()
@@ -519,7 +519,11 @@ def render_clip(seg, features, clip_path):
 
         pipe.stdin.write(canvas.tobytes())
 
-    pipe.stdin.close(); pipe.wait(); stderr_fh.close()
+    pipe.stdin.close()
+    returncode = pipe.wait()
+    stderr_fh.close()
+    if returncode:
+        raise subprocess.CalledProcessError(returncode, cmd)
 ```
 
 ### Building Segments from Scene Table
@@ -556,7 +560,7 @@ with ProcessPoolExecutor(max_workers=N_WORKERS) as pool:
         try:
             fut.result()
         except Exception as e:
-            log(f"ERROR {futures[fut]}: {e}")
+            raise RuntimeError(f"Failed to render {futures[fut]}") from e
 ```
 
 **Pickling constraint**: `ProcessPoolExecutor` serializes arguments via pickle. Module-level functions can be pickled; lambdas and closures cannot. All `fx_*` scene functions MUST be defined at module level, not as closures or class methods.

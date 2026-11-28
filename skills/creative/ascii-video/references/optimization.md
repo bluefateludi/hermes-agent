@@ -503,7 +503,7 @@ with ProcessPoolExecutor(max_workers=N_WORKERS) as pool:
             fut.result()
             log(f"  {clip_id} done")
         except Exception as e:
-            log(f"  {clip_id} FAILED: {e}")
+            raise RuntimeError(f"Failed to render {clip_id}") from e
 ```
 
 ### Worker Isolation
@@ -527,8 +527,10 @@ stderr_fh = open(err_path, "w")
 pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=stderr_fh)
 # ... write all frames ...
 pipe.stdin.close()
-pipe.wait()
+returncode = pipe.wait()
 stderr_fh.close()
+if returncode:
+    raise subprocess.CalledProcessError(returncode, cmd)
 ```
 
 ### Concatenation
